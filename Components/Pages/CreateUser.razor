@@ -1,0 +1,171 @@
+@page "/create-user"
+@using MoodAtlas.Services
+@using MoodAtlas.Models
+@inject UserService UserService
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Create New User</h3>
+                </div>
+                <div class="card-body">
+                    @if (successMessage != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @successMessage
+                            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+                        </div>
+                    }
+
+                    @if (errorMessage != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @errorMessage
+                            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <form @onsubmit="HandleSubmit">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="username" 
+                                   @bind="newUser.Username" 
+                                   placeholder="Enter username"
+                                   required />
+                            <small class="form-text text-muted">Choose a unique username</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="securityPin" class="form-label">Security PIN</label>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="securityPin" 
+                                   @bind="newUser.SecurityPIN" 
+                                   placeholder="Enter 4-6 digit PIN"
+                                   maxlength="10"
+                                   required />
+                            <small class="form-text text-muted">Enter a secure PIN for your account</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Theme Preference</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="theme" id="lightTheme" 
+                                       @onchange="@((ChangeEventArgs e) => newUser.IsDarkMode = false)" />
+                                <label class="btn btn-outline-primary" for="lightTheme">☀️ Light</label>
+
+                                <input type="radio" class="btn-check" name="theme" id="darkTheme" 
+                                       @onchange="@((ChangeEventArgs e) => newUser.IsDarkMode = true)" />
+                                <label class="btn btn-outline-primary" for="darkTheme">🌙 Dark</label>
+                            </div>
+                            <small class="form-text text-muted d-block mt-2">Selected: @(newUser.IsDarkMode ? "Dark Mode" : "Light Mode")</small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Creating...</span>
+                                }
+                                else
+                                {
+                                    <span>Create User</span>
+                                }
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="/login" class="btn btn-secondary">Back to Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        border-bottom: 2px solid #0d6efd;
+    }
+
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+</style>
+
+@code {
+    private User newUser = new User();
+    private string successMessage = "";
+    private string errorMessage = "";
+    private bool isSubmitting = false;
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            // Validate input
+            if (string.IsNullOrWhiteSpace(newUser.Username))
+            {
+                errorMessage = "Username is required!";
+                isSubmitting = false;
+                return;
+            }
+
+            if (newUser.Username.Length < 3)
+            {
+                errorMessage = "Username must be at least 3 characters!";
+                isSubmitting = false;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(newUser.SecurityPIN))
+            {
+                errorMessage = "Security PIN is required!";
+                isSubmitting = false;
+                return;
+            }
+
+            if (newUser.SecurityPIN.Length < 4 || newUser.SecurityPIN.Length > 10)
+            {
+                errorMessage = "Security PIN must be between 4 and 10 characters!";
+                isSubmitting = false;
+                return;
+            }
+
+
+
+            // Create the user
+            int userId = await UserService.CreateUserAsync(newUser);
+
+            successMessage = $"✓ User created successfully! User ID: {userId}";
+
+            // Reset form
+            newUser = new User();
+            await Task.Delay(2000); // Show success message for 2 seconds
+            successMessage = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating user: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

@@ -7,6 +7,7 @@
     <base href="/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/theme.css" />
     <link rel="stylesheet" href="MoodAtlas.styles.css" />
     <link rel="icon" href="data:,">
 </head>
@@ -24,6 +25,66 @@
     </div>
 
     <script src="_framework/blazor.webview.js" autostart="false"></script>
+
+    <script>
+        // Theme Management
+        function applyTheme(isDarkMode) {
+            const root = document.documentElement;
+            if (isDarkMode) {
+                root.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                root.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Load theme on page load
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        });
+
+        // Tab switching function
+        function switchTab(tabId) {
+            const tab = document.getElementById(tabId);
+            if (tab) {
+                const bootstrapTab = new bootstrap.Tab(tab);
+                bootstrapTab.show();
+            }
+        }
+
+        // File download function
+        function downloadFile(filePath, fileName) {
+            var link = document.createElement('a');
+            link.href = filePath;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // File upload trigger
+        function triggerFileUpload(inputId) {
+            document.getElementById(inputId).click();
+        }
+
+        // Clipboard function
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function () {
+                alert('Copied to clipboard!');
+            }, function (err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        // Confirmation dialog
+        function showConfirmation(message) {
+            return confirm(message);
+        }
+    </script>
 
 </body>
 

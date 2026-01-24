@@ -1,0 +1,398 @@
+﻿@page "/calendar"
+@using MoodAtlas.Services
+@using MoodAtlas.Models
+@inject UserService UserService
+@inject EntryService EntryService
+@inject MoodService MoodService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="min-vh-100">
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="container-fluid">
+            <span class="navbar-brand fw-bold">MoodAtlas Calendar</span>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span class="text-white">Welcome, <strong>@currentUser?.Username</strong></span>
+                <button class="btn btn-outline-light btn-sm" @onclick="GoToDashboard">Dashboard</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="card border-0 shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">Journal Calendar</h4>
+                    <small>Click on a date to view or edit entries</small>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <button class="btn btn-outline-light btn-sm" @onclick="PreviousMonth">← Previous</button>
+                    <h5 class="mb-0 mx-3">@currentMonth.ToString("MMMM yyyy")</h5>
+                    <button class="btn btn-outline-light btn-sm" @onclick="NextMonth">Next →</button>
+                    <button class="btn btn-outline-light btn-sm ms-3" @onclick="GoToToday">Today</button>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Calendar Grid -->
+                <div class="calendar-grid">
+                    <!-- Day headers -->
+                    <div class="calendar-row day-headers">
+                        @foreach (var day in dayNames)
+                        {
+                            <div class="calendar-cell day-header">@day</div>
+                        }
+                    </div>
+
+                    <!-- Calendar cells -->
+                    @for (int week = 0; week < 6; week++)
+                    {
+                        <div class="calendar-row">
+                            @for (int day = 0; day < 7; day++)
+                            {
+                                var dateIndex = week * 7 + day;
+                                if (dateIndex < calendarDays.Count)
+                                {
+                                    var calendarDay = calendarDays[dateIndex];
+                                    <div class="calendar-cell @GetCellClass(calendarDay)">
+                                        <div class="date-number">@calendarDay.Date.Day</div>
+                                        @if (calendarDay.HasEntry)
+                                        {
+                                            <div class="entry-indicator">
+                                                @if (calendarDay.Moods.Any())
+                                                {
+                                                    <span class="mood-emoji">@calendarDay.PrimaryMoodEmoji</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="no-mood">📝</span>
+                                                }
+                                            </div>
+                                            <div class="entry-preview" @onclick="() => ViewEntry(calendarDay)">
+                                                @calendarDay.EntryTitle
+                                            </div>
+                                        }
+                                        else if (calendarDay.IsToday)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary mt-2" @onclick="() => CreateEntryForDate(calendarDay.Date)">
+                                                + Add Entry
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- Legend -->
+                <div class="calendar-legend mt-4">
+                    <h6>Legend:</h6>
+                    <div class="d-flex flex-wrap gap-3 mt-2">
+                        <div class="d-flex align-items-center">
+                            <div class="legend-color" style="background-color: #4CAF50;"></div>
+                            <span class="ms-2">Positive Mood</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="legend-color" style="background-color: #FF9800;"></div>
+                            <span class="ms-2">Neutral Mood</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="legend-color" style="background-color: #F44336;"></div>
+                            <span class="ms-2">Negative Mood</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="legend-color" style="background-color: #e0e0e0;"></div>
+                            <span class="ms-2">No Entry</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="legend-color" style="border: 2px solid #667eea;"></div>
+                            <span class="ms-2">Today</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .calendar-grid {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .calendar-row {
+        display: flex;
+        min-height: 120px;
+    }
+
+    .calendar-cell {
+        flex: 1;
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        position: relative;
+        transition: background-color 0.2s;
+    }
+
+        .calendar-cell:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+
+    .day-headers {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        min-height: 40px;
+    }
+
+    .day-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .date-number {
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-bottom: 5px;
+    }
+
+    .entry-indicator {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        font-size: 1.5rem;
+    }
+
+    .entry-preview {
+        font-size: 0.85rem;
+        margin-top: 5px;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        background-color: rgba(255,255,255,0.7);
+    }
+
+        .entry-preview:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+        }
+
+    .calendar-legend {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+    }
+
+    .has-entry {
+        background-color: #f0f8ff;
+    }
+
+    .today {
+        border: 2px solid #667eea !important;
+        background-color: #f8f9ff;
+    }
+
+    .positive-mood {
+        background-color: rgba(76, 175, 80, 0.1);
+    }
+
+    .neutral-mood {
+        background-color: rgba(255, 152, 0, 0.1);
+    }
+
+    .negative-mood {
+        background-color: rgba(244, 67, 54, 0.1);
+    }
+</style>
+
+@code {
+    private User currentUser;
+    private bool isDarkMode = false;
+    private DateTime currentMonth = DateTime.Now;
+    private List<CalendarDay> calendarDays = new();
+    private List<Entry> userEntries = new();
+    private Dictionary<DateTime, Entry> entriesByDate = new();
+
+    private string[] dayNames = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
+    public class CalendarDay
+    {
+        public DateTime Date { get; set; }
+        public bool IsCurrentMonth { get; set; }
+        public bool IsToday { get; set; }
+        public bool HasEntry { get; set; }
+        public Entry Entry { get; set; }
+        public List<Mood> Moods { get; set; } = new();
+        public string PrimaryMoodEmoji => Moods.FirstOrDefault()?.Emoji ?? "📝";
+        public string EntryTitle => Entry?.Title?.Length > 15 ? Entry.Title.Substring(0, 15) + "..." : Entry?.Title ?? "";
+        public string MoodCategory => Moods.FirstOrDefault()?.Category ?? "";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var users = await UserService.GetAllUsersAsync();
+            currentUser = users.FirstOrDefault();
+
+            if (currentUser == null)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            isDarkMode = currentUser.IsDarkMode;
+            await JS.InvokeVoidAsync("applyTheme", isDarkMode);
+            await LoadEntries();
+            GenerateCalendar();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading calendar: {ex.Message}");
+        }
+    }
+
+    private async Task LoadEntries()
+    {
+        userEntries = await EntryService.GetEntriesByUserIdAsync(currentUser.UserId);
+        entriesByDate = userEntries.ToDictionary(e => e.EntryDate.Date);
+    }
+
+    private void GenerateCalendar()
+    {
+        calendarDays.Clear();
+
+        // Get first day of month
+        var firstDayOfMonth = new DateTime(currentMonth.Year, currentMonth.Month, 1);
+        var daysInMonth = DateTime.DaysInMonth(currentMonth.Year, currentMonth.Month);
+
+        // Calculate offset for first day
+        int startDay = (int)firstDayOfMonth.DayOfWeek;
+
+        // Add days from previous month
+        var previousMonth = currentMonth.AddMonths(-1);
+        var daysInPreviousMonth = DateTime.DaysInMonth(previousMonth.Year, previousMonth.Month);
+
+        for (int i = startDay - 1; i >= 0; i--)
+        {
+            var date = firstDayOfMonth.AddDays(-(i + 1));
+            calendarDays.Add(new CalendarDay
+            {
+                Date = date,
+                IsCurrentMonth = false
+            });
+        }
+
+        // Add days of current month
+        for (int day = 1; day <= daysInMonth; day++)
+        {
+            var date = new DateTime(currentMonth.Year, currentMonth.Month, day);
+            var isToday = date.Date == DateTime.Now.Date;
+
+            var calendarDay = new CalendarDay
+            {
+                Date = date,
+                IsCurrentMonth = true,
+                IsToday = isToday
+            };
+
+            // Check if there's an entry for this date
+            if (entriesByDate.TryGetValue(date.Date, out var entry))
+            {
+                calendarDay.HasEntry = true;
+                calendarDay.Entry = entry;
+
+                // Load moods for this entry
+                LoadEntryMoods(calendarDay, entry.EntryId);
+            }
+
+            calendarDays.Add(calendarDay);
+        }
+
+        // Add days from next month to complete grid (6 rows * 7 days = 42 cells)
+        int remainingCells = 42 - calendarDays.Count;
+        var nextMonth = currentMonth.AddMonths(1);
+        var firstDayNextMonth = new DateTime(nextMonth.Year, nextMonth.Month, 1);
+
+        for (int i = 0; i < remainingCells; i++)
+        {
+            var date = firstDayNextMonth.AddDays(i);
+            calendarDays.Add(new CalendarDay
+            {
+                Date = date,
+                IsCurrentMonth = false
+            });
+        }
+    }
+
+    private async void LoadEntryMoods(CalendarDay calendarDay, int entryId)
+    {
+        var moods = await MoodService.GetMoodsForEntryAsync(entryId);
+        calendarDay.Moods = moods;
+    }
+
+    private string GetCellClass(CalendarDay day)
+    {
+        var classes = new List<string>();
+
+        if (!day.IsCurrentMonth)
+            classes.Add("text-muted");
+
+        if (day.IsToday)
+            classes.Add("today");
+
+        if (day.HasEntry)
+            classes.Add("has-entry");
+
+        if (!string.IsNullOrEmpty(day.MoodCategory))
+            classes.Add($"{day.MoodCategory.ToLower()}-mood");
+
+        return string.Join(" ", classes);
+    }
+
+    private void PreviousMonth()
+    {
+        currentMonth = currentMonth.AddMonths(-1);
+        GenerateCalendar();
+    }
+
+    private void NextMonth()
+    {
+        currentMonth = currentMonth.AddMonths(1);
+        GenerateCalendar();
+    }
+
+    private void GoToToday()
+    {
+        currentMonth = DateTime.Now;
+        GenerateCalendar();
+    }
+
+    private void ViewEntry(CalendarDay day)
+    {
+        if (day.HasEntry && day.Entry != null)
+        {
+            Navigation.NavigateTo($"/entry/edit/{day.Entry.EntryId}");
+        }
+    }
+
+    private void CreateEntryForDate(DateTime date)
+    {
+        Navigation.NavigateTo($"/entry-editor?date={date:yyyy-MM-dd}");
+    }
+
+    private void GoToDashboard()
+    {
+        Navigation.NavigateTo($"/dashboard-enhanced/{currentUser.UserId}");
+    }
+}

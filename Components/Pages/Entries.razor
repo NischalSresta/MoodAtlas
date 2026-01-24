@@ -1,0 +1,267 @@
+@page "/entries"
+@using MoodAtlas.Services
+@using MoodAtlas.Models
+@inject EntryService EntryService
+@inject UserService UserService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="min-vh-100">
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="container-fluid">
+            <span class="navbar-brand fw-bold">MoodAtlas</span>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span class="text-white">Welcome, <strong>@currentUser?.Username</strong></span>
+                <button class="btn btn-outline-light btn-sm" @onclick="Logout">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Navigation Tabs -->
+    <div class="container-fluid pt-4">
+        <div class="nav nav-tabs mb-4" role="tablist">
+            <a href="/dashboard-enhanced/@currentUser?.UserId" class="nav-link">Dashboard</a>
+            <a href="/entry-editor" class="nav-link">New Entry</a>
+            <a href="/entries" class="nav-link active">Entries</a>
+            <a href="/calendar" class="nav-link">Calendar</a>
+            <button class="nav-link ms-auto theme-toggle" @onclick="ToggleTheme" style="border: none; background: none; cursor: pointer;">
+                @if (isDarkMode)
+                {
+                    <span style="font-size: 1.5rem;">☀️</span>
+                }
+                else
+                {
+                    <span style="font-size: 1.5rem;">🌙</span>
+                }
+            </button>
+        </div>
+
+        <div class="container">
+            <div class="card border-0 shadow">
+                <div class="card-header bg-light">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" 
+                                   class="form-control" 
+                                   placeholder="Search entries..." 
+                                   @bind="searchTerm"
+                                   @onkeyup="SearchEntries" />
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" 
+                                   class="form-control" 
+                                   @bind="filterStartDate" />
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" 
+                                   class="form-control" 
+                                   @bind="filterEndDate" />
+                        </div>
+                        <div class="col-md-2 ms-auto">
+                            <button class="btn btn-primary w-100" @onclick="CreateNewEntry">
+                                <span class="bi bi-plus-lg"></span> New Entry
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    @if (filteredEntries.Count == 0)
+                    {
+                        <div class="p-5 text-center text-muted">
+                            <p>No entries found. <a href="/entry-editor">Create your first entry</a></p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="entry-list">
+                            @foreach (var entryItem in GetPagedEntries())
+                            {
+                                <div class="entry-item p-4 border-bottom" @onclick="() => EditEntry(entryItem.EntryId)" style="cursor: pointer;">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <small class="text-muted">@entryItem.EntryDate.ToString("MMMM dd, yyyy")</small>
+                                            <h5 class="mb-1 mt-2">@entryItem.Title</h5>
+                                        </div>
+                                        <div class="mood-indicator" style="width: 16px; height: 16px; border-radius: 50%; background-color: @GetMoodColor(entryItem); margin-top: 4px;"></div>
+                                    </div>
+                                    <p class="text-muted mb-0">@GetEntryPreview(entryItem.Content)</p>
+                                    <small class="text-muted mt-2 d-block">@entryItem.WordCount words</small>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (totalPages > 1)
+                {
+                    <div class="card-footer bg-light d-flex justify-content-center align-items-center gap-3 py-3">
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                @onclick="PreviousPage" 
+                                disabled="@(currentPage == 1)">
+                            Previous
+                        </button>
+                        <span>Page @currentPage of @totalPages</span>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                @onclick="NextPage" 
+                                disabled="@(currentPage == totalPages)">
+                            Next
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .entry-item {
+        transition: background-color 0.2s;
+    }
+
+    .entry-item:hover {
+        background-color: rgba(102, 126, 234, 0.05);
+    }
+
+    .entry-list {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+</style>
+
+@code {
+    private User currentUser;
+    private List<Entry> allEntries = new List<Entry>();
+    private List<Entry> filteredEntries = new List<Entry>();
+    private bool isDarkMode = false;
+    private string searchTerm = "";
+    private DateTime filterStartDate = DateTime.Now.AddMonths(-1);
+    private DateTime filterEndDate = DateTime.Now.AddDays(1);
+    private int currentPage = 1;
+    private int pageSize = 5;
+    private int totalPages = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var users = await UserService.GetAllUsersAsync();
+            currentUser = users.FirstOrDefault();
+
+            if (currentUser == null)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            isDarkMode = currentUser.IsDarkMode;
+            await JS.InvokeVoidAsync("applyTheme", isDarkMode);
+            await LoadEntries();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private async Task LoadEntries()
+    {
+        try
+        {
+            allEntries = await EntryService.GetEntriesByUserIdAsync(currentUser.UserId);
+            FilterEntries();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading entries: {ex.Message}");
+        }
+    }
+
+    private void SearchEntries()
+    {
+        FilterEntries();
+    }
+
+    private void FilterEntries()
+    {
+        filteredEntries = allEntries
+            .Where(e => 
+                (string.IsNullOrEmpty(searchTerm) || 
+                 e.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                 e.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+                (e.EntryDate.Date >= filterStartDate.Date && e.EntryDate.Date <= filterEndDate.Date))
+            .OrderByDescending(e => e.EntryDate)
+            .ToList();
+
+        currentPage = 1;
+        CalculateTotalPages();
+    }
+
+    private void CalculateTotalPages()
+    {
+        totalPages = (int)Math.Ceiling((double)filteredEntries.Count / pageSize);
+        if (totalPages == 0) totalPages = 1;
+    }
+
+    private List<Entry> GetPagedEntries()
+    {
+        return filteredEntries
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
+    private void PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+        }
+    }
+
+    private void NextPage()
+    {
+        if (currentPage < totalPages)
+        {
+            currentPage++;
+        }
+    }
+
+    private string GetEntryPreview(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return "";
+        var preview = content.Length > 150 ? content.Substring(0, 150) + "..." : content;
+        return preview.Replace("\n", " ");
+    }
+
+    private string GetMoodColor(Entry entry)
+    {
+        // Random color based on entry ID for now
+        var colors = new[] { "#667eea", "#764ba2", "#f093fb", "#4facfe", "#00f2fe", "#43e97b", "#fa709a", "#fee140" };
+        return colors[entry.EntryId % colors.Length];
+    }
+
+    private void EditEntry(int entryId)
+    {
+        Navigation.NavigateTo($"/entry-editor/{entryId}");
+    }
+
+    private void CreateNewEntry()
+    {
+        Navigation.NavigateTo("/entry-editor");
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        currentUser.IsDarkMode = isDarkMode;
+        await UserService.UpdateUserAsync(currentUser);
+        await JS.InvokeVoidAsync("applyTheme", isDarkMode);
+    }
+
+    private void Logout()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

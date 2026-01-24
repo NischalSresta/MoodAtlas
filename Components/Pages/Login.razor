@@ -1,0 +1,154 @@
+@page "/login"
+@using MoodAtlas.Services
+@using MoodAtlas.Models
+@inject UserService UserService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-gradient text-white text-center py-4">
+                    <h1 class="mb-0" style="font-size: 2rem; font-weight: bold;">MoodAtlas</h1>
+                </div>
+                <div class="card-body p-5">
+                    <h3 class="text-center mb-4">Login Form</h3>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @errorMessage
+                            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <form @onsubmit="HandleLogin">
+                        <div class="mb-4">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="username" 
+                                   @bind="loginUsername" 
+                                   placeholder="Enter Username"
+                                   required
+                                   autofocus />
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="pin" class="form-label">Security PIN</label>
+                            <input type="password" 
+                                   class="form-control form-control-lg" 
+                                   id="pin" 
+                                   @bind="loginPIN" 
+                                   placeholder="Enter Password"
+                                   required />
+                        </div>
+
+                        <div class="d-grid gap-2 mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@isLoggingIn">
+                                @if (isLoggingIn)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Logging in...</span>
+                                }
+                                else
+                                {
+                                    <span>Login</span>
+                                }
+                            </button>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <p class="text-center text-muted mb-0">
+                            Don't have an account? <a href="/create-user" class="text-primary fw-bold">Create one</a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .form-control-lg {
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        padding: 12px 15px;
+        font-size: 1rem;
+    }
+
+    .form-control-lg:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn-lg {
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 12px 24px;
+    }
+
+    .card {
+        border-radius: 12px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+</style>
+
+@code {
+    private string loginUsername = "";
+    private string loginPIN = "";
+    private string errorMessage = "";
+    private bool isLoggingIn = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Apply default light theme on login page
+        await JS.InvokeVoidAsync("applyTheme", false);
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoggingIn = true;
+        errorMessage = "";
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(loginUsername) || string.IsNullOrWhiteSpace(loginPIN))
+            {
+                errorMessage = "Username and PIN are required!";
+                isLoggingIn = false;
+                return;
+            }
+
+            // Get all users and find matching credentials
+            var users = await UserService.GetAllUsersAsync();
+            var user = users.FirstOrDefault(u => u.Username == loginUsername && u.SecurityPIN == loginPIN);
+
+            if (user == null)
+            {
+                errorMessage = "Invalid username or PIN!";
+                isLoggingIn = false;
+                return;
+            }
+
+            // Store user ID in session/local storage and navigate to dashboard
+            await Task.Delay(500); // Simulate login delay
+            Navigation.NavigateTo($"/dashboard-enhanced/{user.UserId}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Login error: {ex.Message}";
+            isLoggingIn = false;
+        }
+    }
+}

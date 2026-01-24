@@ -1,0 +1,577 @@
+/* ==========================================
+   MoodAtlas Theme System
+   ========================================== */
+
+/* ==========================================
+   CSS Variables for Light Mode (Default)
+   ========================================== */
+:root {
+    /* Background Colors */
+    --bg-primary: #f5f5f5;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #fafafa;
+    --bg-card: #ffffff;
+    --bg-hover: rgba(102, 126, 234, 0.05);
+    
+    /* Text Colors */
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --text-muted: #999999;
+    --text-inverse: #ffffff;
+    
+    /* Border Colors */
+    --border-color: #dee2e6;
+    --border-light: #e9ecef;
+    
+    /* Brand Colors */
+    --brand-primary: #667eea;
+    --brand-secondary: #764ba2;
+    --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    
+    /* Status Colors */
+    --success: #4CAF50;
+    --warning: #FF9800;
+    --danger: #F44336;
+    --info: #2196F3;
+    
+    /* Mood Colors */
+    --mood-positive: rgba(76, 175, 80, 0.1);
+    --mood-positive-border: #4CAF50;
+    --mood-neutral: rgba(255, 152, 0, 0.1);
+    --mood-neutral-border: #FF9800;
+    --mood-negative: rgba(244, 67, 54, 0.1);
+    --mood-negative-border: #F44336;
+    
+    /* Card & Component Colors */
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+    
+    /* Input & Form Colors */
+    --input-bg: #ffffff;
+    --input-border: #ced4da;
+    --input-focus: #667eea;
+    --input-disabled: #e9ecef;
+    
+    /* Navigation Colors */
+    --nav-bg: #ffffff;
+    --nav-border: #dee2e6;
+    --nav-active: #667eea;
+    
+    /* Modal Colors */
+    --modal-backdrop: rgba(0, 0, 0, 0.5);
+    --modal-bg: #ffffff;
+}
+
+/* ==========================================
+   Dark Mode Variables
+   ========================================== */
+[data-theme="dark"] {
+    /* Background Colors */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #242424;
+    --bg-card: #2d2d2d;
+    --bg-hover: rgba(102, 126, 234, 0.15);
+    
+    /* Text Colors */
+    --text-primary: #e8e8e8;
+    --text-secondary: #b0b0b0;
+    --text-muted: #808080;
+    --text-inverse: #1a1a1a;
+    
+    /* Border Colors */
+    --border-color: #404040;
+    --border-light: #353535;
+    
+    /* Status Colors (slightly adjusted for dark mode) */
+    --success: #66BB6A;
+    --warning: #FFA726;
+    --danger: #EF5350;
+    --info: #42A5F5;
+    
+    /* Mood Colors (darker variants) */
+    --mood-positive: rgba(102, 187, 106, 0.15);
+    --mood-positive-border: #66BB6A;
+    --mood-neutral: rgba(255, 167, 38, 0.15);
+    --mood-neutral-border: #FFA726;
+    --mood-negative: rgba(239, 83, 80, 0.15);
+    --mood-negative-border: #EF5350;
+    
+    /* Card & Component Colors */
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+    
+    /* Input & Form Colors */
+    --input-bg: #353535;
+    --input-border: #404040;
+    --input-focus: #667eea;
+    --input-disabled: #2d2d2d;
+    
+    /* Navigation Colors */
+    --nav-bg: #2d2d2d;
+    --nav-border: #404040;
+    --nav-active: #667eea;
+    
+    /* Modal Colors */
+    --modal-backdrop: rgba(0, 0, 0, 0.7);
+    --modal-bg: #2d2d2d;
+}
+
+/* ==========================================
+   Global Styles
+   ========================================== */
+body {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ==========================================
+   Card Styles
+   ========================================== */
+.card {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+    box-shadow: var(--card-shadow) !important;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: var(--card-shadow-hover) !important;
+}
+
+.card-header {
+    background-color: var(--bg-tertiary) !important;
+    border-bottom-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.card-footer {
+    background-color: var(--bg-tertiary) !important;
+    border-top-color: var(--border-color) !important;
+}
+
+.card-body {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ==========================================
+   Form & Input Styles
+   ========================================== */
+.form-control,
+.form-select {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-focus) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+}
+
+.form-control::placeholder {
+    color: var(--text-muted) !important;
+}
+
+.form-control:disabled,
+.form-select:disabled {
+    background-color: var(--input-disabled) !important;
+}
+
+.form-label {
+    color: var(--text-primary) !important;
+}
+
+/* ==========================================
+   Text Utilities
+   ========================================== */
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.text-white {
+    color: #ffffff !important;
+}
+
+/* ==========================================
+   Navigation Tabs
+   ========================================== */
+.nav-tabs {
+    border-bottom-color: var(--nav-border) !important;
+}
+
+.nav-tabs .nav-link {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.2s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--nav-active) !important;
+    border-color: transparent transparent var(--nav-border) !important;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--bg-card) !important;
+    border-color: var(--nav-border) var(--nav-border) var(--bg-card) !important;
+    color: var(--nav-active) !important;
+}
+
+/* ==========================================
+   Buttons
+   ========================================== */
+.btn-outline-primary {
+    color: var(--brand-primary) !important;
+    border-color: var(--brand-primary) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--brand-primary) !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-secondary {
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--text-secondary) !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-light {
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    border-color: #ffffff !important;
+}
+
+/* ==========================================
+   Modal Styles
+   ========================================== */
+.modal {
+    background-color: var(--modal-backdrop) !important;
+}
+
+.modal-content {
+    background-color: var(--modal-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.modal-header {
+    border-bottom-color: var(--border-color) !important;
+}
+
+.modal-footer {
+    border-top-color: var(--border-color) !important;
+}
+
+.btn-close {
+    filter: var(--text-primary) == #e8e8e8 ? invert(1) : invert(0);
+}
+
+[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* ==========================================
+   Alerts
+   ========================================== */
+.alert {
+    border-color: var(--border-color) !important;
+}
+
+.alert-success {
+    background-color: rgba(76, 175, 80, 0.1) !important;
+    color: var(--success) !important;
+    border-color: var(--success) !important;
+}
+
+[data-theme="dark"] .alert-success {
+    background-color: rgba(102, 187, 106, 0.15) !important;
+    color: #66BB6A !important;
+    border-color: #66BB6A !important;
+}
+
+.alert-danger {
+    background-color: rgba(244, 67, 54, 0.1) !important;
+    color: var(--danger) !important;
+    border-color: var(--danger) !important;
+}
+
+[data-theme="dark"] .alert-danger {
+    background-color: rgba(239, 83, 80, 0.15) !important;
+    color: #EF5350 !important;
+    border-color: #EF5350 !important;
+}
+
+.alert-warning {
+    background-color: rgba(255, 152, 0, 0.1) !important;
+    color: var(--warning) !important;
+    border-color: var(--warning) !important;
+}
+
+[data-theme="dark"] .alert-warning {
+    background-color: rgba(255, 167, 38, 0.15) !important;
+    color: #FFA726 !important;
+    border-color: #FFA726 !important;
+}
+
+.alert-info {
+    background-color: rgba(33, 150, 243, 0.1) !important;
+    color: var(--info) !important;
+    border-color: var(--info) !important;
+}
+
+[data-theme="dark"] .alert-info {
+    background-color: rgba(66, 165, 245, 0.15) !important;
+    color: #42A5F5 !important;
+    border-color: #42A5F5 !important;
+}
+
+/* Alert icons and close button */
+.alert .btn-close {
+    filter: none;
+}
+
+[data-theme="dark"] .alert .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* ==========================================
+   Mood Indicators
+   ========================================== */
+.positive-mood {
+    background-color: var(--mood-positive) !important;
+    border-left: 3px solid var(--mood-positive-border) !important;
+}
+
+.neutral-mood {
+    background-color: var(--mood-neutral) !important;
+    border-left: 3px solid var(--mood-neutral-border) !important;
+}
+
+.negative-mood {
+    background-color: var(--mood-negative) !important;
+    border-left: 3px solid var(--mood-negative-border) !important;
+}
+
+/* ==========================================
+   Entry Items & List
+   ========================================== */
+.entry-item {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-light) !important;
+    color: var(--text-primary) !important;
+    transition: all 0.2s ease;
+}
+
+.entry-item:hover {
+    background-color: var(--bg-hover) !important;
+    cursor: pointer;
+}
+
+.entry-preview {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ==========================================
+   Calendar Styles
+   ========================================== */
+.calendar-cell {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-light) !important;
+    color: var(--text-primary) !important;
+}
+
+.calendar-cell:hover {
+    background-color: var(--bg-hover) !important;
+}
+
+.calendar-cell.today {
+    border-color: var(--brand-primary) !important;
+    background-color: var(--bg-tertiary) !important;
+}
+
+.day-headers {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ==========================================
+   Progress Bars
+   ========================================== */
+.progress {
+    background-color: var(--bg-tertiary) !important;
+}
+
+/* ==========================================
+   Tables
+   ========================================== */
+.table {
+    color: var(--text-primary) !important;
+}
+
+.table-bordered {
+    border-color: var(--border-color) !important;
+}
+
+.table-bordered th,
+.table-bordered td {
+    border-color: var(--border-color) !important;
+}
+
+/* ==========================================
+   Badges
+   ========================================== */
+.badge {
+    transition: all 0.2s ease;
+}
+
+/* ==========================================
+   Sidebar/Navbar
+   ========================================== */
+.sidebar {
+    background-color: var(--nav-bg) !important;
+    border-right-color: var(--nav-border) !important;
+}
+
+.navbar-dark {
+    background: var(--brand-gradient) !important;
+}
+
+/* ==========================================
+   Scrollbar Styling (for dark mode)
+   ========================================== */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #404040;
+    border-radius: 5px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #505050;
+}
+
+/* ==========================================
+   Transitions & Animations
+   ========================================== */
+* {
+    transition-property: background-color, border-color, color;
+    transition-duration: 0.3s;
+    transition-timing-function: ease;
+}
+
+/* Exclude specific elements from transition */
+.btn,
+.form-control,
+.nav-link {
+    transition-duration: 0.2s;
+}
+
+/* ==========================================
+   Custom Component Styles
+   ========================================== */
+.insight-item {
+    border-bottom-color: var(--border-light) !important;
+    color: var(--text-primary) !important;
+}
+
+.tag-cloud {
+    color: var(--text-primary) !important;
+}
+
+.legend-color {
+    border-color: var(--border-color) !important;
+}
+
+/* ==========================================
+   Utility Classes
+   ========================================== */
+.bg-light {
+    background-color: var(--bg-tertiary) !important;
+}
+
+.bg-white {
+    background-color: var(--bg-card) !important;
+}
+
+.border {
+    border-color: var(--border-color) !important;
+}
+
+.border-top {
+    border-top-color: var(--border-color) !important;
+}
+
+.border-bottom {
+    border-bottom-color: var(--border-color) !important;
+}
+
+.border-left {
+    border-left-color: var(--border-color) !important;
+}
+
+.border-right {
+    border-right-color: var(--border-color) !important;
+}
+
+/* ==========================================
+   Theme Toggle Animation
+   ========================================== */
+.theme-toggle {
+    transition: transform 0.3s ease;
+}
+
+.theme-toggle:hover {
+    transform: rotate(20deg);
+}
+
+/* ==========================================
+   Responsive Adjustments
+   ========================================== */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+/* ==========================================
+   Print Styles
+   ========================================== */
+@media print {
+    [data-theme="dark"] {
+        --bg-primary: #ffffff;
+        --bg-secondary: #ffffff;
+        --bg-card: #ffffff;
+        --text-primary: #000000;
+        --text-secondary: #666666;
+    }
+}

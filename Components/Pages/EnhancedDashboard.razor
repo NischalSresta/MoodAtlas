@@ -1,0 +1,426 @@
+﻿@page "/dashboard-enhanced/{UserId:int}"
+@using MoodAtlas.Services
+@using MoodAtlas.Models
+@inject UserService UserService
+@inject AnalyticsService AnalyticsService
+@inject ExportService ExportService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="min-vh-100">
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="container-fluid">
+            <span class="navbar-brand fw-bold">MoodAtlas Dashboard</span>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span class="text-white">Welcome, <strong>@currentUser?.Username</strong></span>
+                <button class="btn btn-outline-light btn-sm" @onclick="ExportData">Export</button>
+                <button class="btn btn-outline-light btn-sm" @onclick="Logout">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Navigation Tabs -->
+    <div class="container-fluid pt-4">
+        <div class="nav nav-tabs mb-4" role="tablist">
+            <a href="/dashboard-enhanced/@currentUser?.UserId" class="nav-link active">Dashboard</a>
+            <a href="/entry-editor" class="nav-link">New Entry</a>
+            <a href="/entries" class="nav-link">Entries</a>
+            <a href="/calendar" class="nav-link">Calendar</a>
+            <button class="nav-link ms-auto theme-toggle" @onclick="ToggleTheme" style="border: none; background: none; cursor: pointer;">
+                @if (isDarkMode)
+                {
+                    <span style="font-size: 1.5rem;">☀️</span>
+                }
+                else
+                {
+                    <span style="font-size: 1.5rem;">🌙</span>
+                }
+            </button>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="container mb-4">
+            <div class="card p-3">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-3">
+                        <label class="form-label">Date Range:</label>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" @bind="startDate" />
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" @bind="endDate" />
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary w-100" @onclick="LoadAnalytics">Apply Filter</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="container mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card text-center p-4 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <h6 class="mb-2">Current Streak</h6>
+                        <h2 class="fw-bold">@analyticsData?.CurrentStreak</h2>
+                        <small>🔥 consecutive days</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center p-4 shadow-sm" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                        <h6 class="mb-2">Longest Streak</h6>
+                        <h2 class="fw-bold">@analyticsData?.LongestStreak</h2>
+                        <small>🏆 all-time record</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center p-4 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <h6 class="mb-2">Total Entries</h6>
+                        <h2 class="fw-bold">@analyticsData?.TotalEntries</h2>
+                        <small>📝 journal entries</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center p-4 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                        <h6 class="mb-2">Missed Days</h6>
+                        <h2 class="fw-bold">@analyticsData?.MissedDays</h2>
+                        <small>📅 without entries</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="container mb-4">
+            <div class="row g-3">
+                <!-- Mood Distribution Chart -->
+                <div class="col-md-6">
+                    <div class="card p-4 shadow-sm">
+                        <h5 class="mb-4">📊 Mood Distribution</h5>
+                        <div id="moodChart" style="height: 300px;">
+                            @if (analyticsData?.MoodDistribution != null)
+                            {
+                                <div class="chart-container">
+                                    @foreach (var mood in analyticsData.MoodDistribution)
+                                    {
+                                        var percentage = analyticsData.TotalEntries > 0 ?
+                                        (mood.Value * 100) / analyticsData.TotalEntries : 0;
+                                        var color = mood.Key == "Positive" ? "#4CAF50" :
+                                        mood.Key == "Neutral" ? "#FF9800" : "#F44336";
+
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <span>@mood.Key</span>
+                                                <span>@mood.Value entries (@percentage%)</span>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar"
+                                                     style="width: @percentage%; background-color: @color;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Most Used Tags -->
+                <div class="col-md-6">
+                    <div class="card p-4 shadow-sm">
+                        <h5 class="mb-4">🏷️ Most Used Tags</h5>
+                        <div id="tagChart" style="height: 300px;">
+                            @if (analyticsData?.TagFrequency != null && analyticsData.TagFrequency.Any())
+                            {
+                                <div class="tag-cloud">
+                                    @foreach (var tag in analyticsData.TagFrequency.Take(10))
+                                    {
+                                        var fontSize = 12 + (tag.Value * 2);
+                                        <span style="font-size: @(fontSize)px; margin: 5px; display: inline-block;">
+                                            @tag.Key (@tag.Value)
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted text-center">No tags recorded yet</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Analytics -->
+        <div class="container mb-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card p-4 shadow-sm">
+                        <h5 class="mb-4">📈 Word Count Trend</h5>
+                        <div style="height: 250px;">
+                            @if (analyticsData?.WordCountTrend != null && analyticsData.WordCountTrend.Any())
+                            {
+                                <div class="trend-chart">
+                                    @foreach (var trend in analyticsData.WordCountTrend)
+                                    {
+                                        <div class="d-flex align-items-center mb-2">
+                                            <small class="me-3" style="width: 80px;">@trend.Key.ToString("MMM dd")</small>
+                                            <div class="flex-grow-1">
+                                                <div class="progress" style="height: 10px;">
+                                                    <div class="progress-bar bg-info" style="width: @(Math.Min(trend.Value, 100))%;">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <small class="ms-2">@trend.Value words</small>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card p-4 shadow-sm">
+                        <h5 class="mb-4">🎯 Insights</h5>
+                        <div class="insights">
+                            <div class="insight-item mb-3">
+                                <strong>Most Frequent Mood:</strong>
+                                <span class="badge bg-success ms-2">@analyticsData?.MostFrequentMood</span>
+                            </div>
+                            <div class="insight-item mb-3">
+                                <strong>Average Words per Entry:</strong>
+                                <span class="badge bg-primary ms-2">@analyticsData?.AverageWordCount words</span>
+                            </div>
+                            <div class="insight-item mb-3">
+                                <strong>Most Used Tags:</strong>
+                                <div class="mt-2">
+                                    @if (analyticsData?.MostUsedTags != null)
+                                    {
+                                        @foreach (var tag in analyticsData.MostUsedTags.Take(3))
+                                        {
+                                            <span class="badge bg-secondary me-1">@tag</span>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                            <div class="insight-item">
+                                <strong>Consistency Score:</strong>
+                                <div class="progress mt-2" style="height: 10px;">
+                                    @{
+                                        var consistency = analyticsData?.TotalEntries > 0 ?
+                                        (analyticsData.TotalEntries * 100) / (analyticsData.TotalEntries + analyticsData.MissedDays) : 0;
+                                    }
+                                    <div class="progress-bar bg-warning" style="width: @consistency%;">
+                                        @consistency%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="container mb-5">
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="card p-4 shadow-sm">
+                        <h5 class="mb-4">🚀 Quick Actions</h5>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <a href="/entry-editor" class="btn btn-primary btn-lg">
+                                <span class="bi bi-pencil-square"></span> Write Today's Entry
+                            </a>
+                            <button class="btn btn-success btn-lg" @onclick="ExportData">
+                                <span class="bi bi-download"></span> Export to PDF
+                            </button>
+                            <a href="/calendar" class="btn btn-info btn-lg">
+                                <span class="bi bi-calendar"></span> View Calendar
+                            </a>
+                            <a href="/analytics" class="btn btn-warning btn-lg">
+                                <span class="bi bi-graph-up"></span> Detailed Analytics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showExportModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Export Journal</h5>
+                    <button type="button" class="btn-close" @onclick="CloseExportModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-control" @bind="exportStartDate" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" class="form-control" @bind="exportEndDate" />
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" @bind="includeMoods" />
+                        <label class="form-check-label">Include Moods</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" @bind="includeTags" />
+                        <label class="form-check-label">Include Tags</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseExportModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmExport" disabled="@isExporting">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <text>Exporting...</text>
+                        }
+                        else
+                        {
+                            <span>Export</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .card {
+        border-radius: 10px;
+        border: none;
+    }
+
+    .progress-bar {
+        border-radius: 5px;
+    }
+
+    .tag-cloud {
+        text-align: center;
+        padding: 20px;
+    }
+
+    .insight-item {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .btn-lg {
+        padding: 15px 30px;
+        font-size: 1.1rem;
+    }
+</style>
+
+@code {
+    [Parameter] public int UserId { get; set; }
+
+    private User currentUser;
+    private AnalyticsService.AnalyticsData analyticsData;
+    private bool isDarkMode = false;
+    private DateTime startDate = DateTime.Now.AddMonths(-1);
+    private DateTime endDate = DateTime.Now;
+
+    // Export modal
+    private bool showExportModal = false;
+    private bool isExporting = false;
+    private DateTime exportStartDate = DateTime.Now.AddMonths(-1);
+    private DateTime exportEndDate = DateTime.Now;
+    private bool includeMoods = true;
+    private bool includeTags = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            currentUser = await UserService.GetUserByIdAsync(UserId);
+            if (currentUser == null)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            isDarkMode = currentUser.IsDarkMode;
+            await JS.InvokeVoidAsync("applyTheme", isDarkMode);
+            await LoadAnalytics();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard: {ex.Message}");
+        }
+    }
+
+    private async Task LoadAnalytics()
+    {
+        try
+        {
+            analyticsData = await AnalyticsService.GetAnalyticsAsync(UserId, startDate, endDate);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading analytics: {ex.Message}");
+        }
+    }
+
+    private async Task ExportData()
+    {
+        exportStartDate = startDate;
+        exportEndDate = endDate;
+        showExportModal = true;
+    }
+
+    private async Task ConfirmExport()
+    {
+        isExporting = true;
+        try
+        {
+            var filePath = await ExportService.ExportToPdfAsync(UserId, exportStartDate, exportEndDate);
+
+            // Download the file
+            await JS.InvokeVoidAsync("downloadFile", filePath, $"MoodAtlas_Export_{DateTime.Now:yyyyMMdd}.pdf");
+
+            CloseExportModal();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Export error: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Export failed: {ex.Message}");
+        }
+        finally
+        {
+            isExporting = false;
+        }
+    }
+
+    private void CloseExportModal()
+    {
+        showExportModal = false;
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        currentUser.IsDarkMode = isDarkMode;
+        await UserService.UpdateUserAsync(currentUser);
+        await JS.InvokeVoidAsync("applyTheme", isDarkMode);
+    }
+
+    private void Logout()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

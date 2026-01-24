@@ -1,0 +1,226 @@
+@page "/dashboard/{UserId:int}"
+@using MoodAtlas.Services
+@using MoodAtlas.Models
+@inject UserService UserService
+@inject EntryService EntryService
+@inject NavigationManager Navigation
+
+<div class="min-vh-100" style="background-color: @(isDarkMode ? "#1a1a1a" : "#f5f5f5")">
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark"
+         style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="container-fluid">
+            <span class="navbar-brand fw-bold">MoodAtlas</span>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span class="text-white">Welcome, <strong>@currentUser?.Username</strong></span>
+                <button class="btn btn-outline-light btn-sm" @onclick="Logout">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Navigation Tabs -->
+    <div class="container-fluid pt-4">
+        <div class="nav nav-tabs mb-4" role="tablist">
+            <a href="/dashboard-enhanced/@UserId" class="nav-link active" style="cursor: pointer;">Dashboard</a>
+            <a href="/entry-editor" class="nav-link" style="cursor: pointer;">New Entry</a>
+            <a href="/entries" class="nav-link" style="cursor: pointer;">Entries</a>
+            <a href="/calendar" class="nav-link" style="cursor: pointer;">Calendar</a>
+            <button class="nav-link ms-auto" @onclick="ToggleTheme"
+                    style="border: none; background: none; cursor: pointer;">
+                @if (isDarkMode)
+                {
+                    <span style="font-size: 1.5rem;">☀️</span>
+                }
+                else
+                {
+                    <span style="font-size: 1.5rem;">🌙</span>
+                }
+            </button>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="container">
+            <div class="row mb-4 g-3">
+                <div class="col-md-4">
+                    <div class="card text-center p-4">
+                        <h6 class="text-muted mb-2">Current Streak</h6>
+                        <h2 class="fw-bold">@currentStreak</h2>
+                        <small class="text-muted">days</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center p-4">
+                        <h6 class="text-muted mb-2">Longest Streak</h6>
+                        <h2 class="fw-bold">@longestStreak</h2>
+                        <small class="text-muted">days</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center p-4">
+                        <h6 class="text-muted mb-2">Total Entries</h6>
+                        <h2 class="fw-bold">@totalEntries</h2>
+                        <small class="text-muted">entries</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card p-4">
+                        <h5>Mood Distribution Chart</h5>
+                        <p class="text-muted">Chart visualization coming soon...</p>
+                        <div
+                            style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 200px; border-radius: 8px;"></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card p-4">
+                        <h5>Most Frequent Mood</h5>
+                        <p class="text-muted">@mostFrequentMood</p>
+                        <div style="font-size: 3rem; text-align: center;">😊</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 d-grid gap-2">
+                    <a href="/entry-editor" class="btn btn-primary btn-lg">Write Today's Entry</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    [Parameter] public int UserId { get; set; }
+
+    private User currentUser;
+    private List<Entry> entries = new List<Entry>();
+    private Entry newEntry = new Entry();
+    private bool isDarkMode = false;
+    private int currentStreak = 0;
+    private int longestStreak = 0;
+    private int totalEntries = 0;
+    private string mostFrequentMood = "Happy";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            currentUser = await UserService.GetUserByIdAsync(UserId);
+            if (currentUser == null)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            isDarkMode = currentUser.IsDarkMode;
+            entries = await EntryService.GetEntriesByUserIdAsync(UserId);
+            totalEntries = entries.Count;
+            currentStreak = CalculateCurrentStreak();
+            longestStreak = CalculateLongestStreak();
+
+            newEntry.UserId = UserId;
+            newEntry.EntryDate = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard: {ex.Message}");
+        }
+    }
+
+    private async Task SaveEntry()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newEntry.Title) || string.IsNullOrWhiteSpace(newEntry.Content))
+            {
+                return;
+            }
+
+            newEntry.EntryDate = DateTime.Now.Date;
+            newEntry.WordCount = newEntry.Content.Split(' ').Length;
+            newEntry.UserId = UserId;
+
+            await EntryService.CreateEntryAsync(newEntry);
+
+            // Reset form
+            newEntry = new Entry { UserId = UserId, EntryDate = DateTime.Now };
+            StateHasChanged();
+
+            // Reload entries
+            entries = await EntryService.GetEntriesByUserIdAsync(UserId);
+            totalEntries = entries.Count;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving entry: {ex.Message}");
+        }
+    }
+
+    private void ResetForm()
+    {
+        newEntry = new Entry { UserId = UserId, EntryDate = DateTime.Now };
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        currentUser.IsDarkMode = isDarkMode;
+        await UserService.UpdateUserAsync(currentUser);
+    }
+
+    private int CalculateCurrentStreak()
+    {
+        if (entries.Count == 0) return 0;
+
+        var sortedEntries = entries.OrderByDescending(e => e.EntryDate).ToList();
+        int streak = 0;
+        var currentDate = DateTime.Now.Date;
+
+        foreach (var entry in sortedEntries)
+        {
+            if (entry.EntryDate.Date == currentDate)
+            {
+                streak++;
+                currentDate = currentDate.AddDays(-1);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return streak;
+    }
+
+    private int CalculateLongestStreak()
+    {
+        if (entries.Count == 0) return 0;
+
+        var sortedEntries = entries.OrderBy(e => e.EntryDate).ToList();
+        int maxStreak = 1;
+        int currentStreak = 1;
+
+        for (int i = 1; i < sortedEntries.Count; i++)
+        {
+            if ((sortedEntries[i].EntryDate.Date - sortedEntries[i - 1].EntryDate.Date).Days == 1)
+            {
+                currentStreak++;
+                maxStreak = Math.Max(maxStreak, currentStreak);
+            }
+            else
+            {
+                currentStreak = 1;
+            }
+        }
+
+        return maxStreak;
+    }
+
+    private void Logout()
+    {
+        Navigation.NavigateTo("/login");
+    }
+
+}
