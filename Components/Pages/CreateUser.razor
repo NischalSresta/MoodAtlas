@@ -2,112 +2,395 @@
 @using MoodAtlas.Services
 @using MoodAtlas.Models
 @inject UserService UserService
+@inject NavigationManager Navigation
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">Create New User</h3>
+<div class="signup-page">
+    <div class="bg-animation">
+        <div class="bg-orb orb-1"></div>
+        <div class="bg-orb orb-2"></div>
+        <div class="bg-orb orb-3"></div>
+    </div>
+
+    <div class="signup-container">
+        <div class="signup-card">
+            <div class="signup-header">
+                <a href="/login" class="back-link">← Back to Login</a>
+                <div class="logo-icon">
+                    <span>✨</span>
                 </div>
-                <div class="card-body">
-                    @if (successMessage != null)
-                    {
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            @successMessage
-                            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
-                        </div>
-                    }
-
-                    @if (errorMessage != null)
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            @errorMessage
-                            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-                        </div>
-                    }
-
-                    <form @onsubmit="HandleSubmit">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" 
-                                   class="form-control" 
-                                   id="username" 
-                                   @bind="newUser.Username" 
-                                   placeholder="Enter username"
-                                   required />
-                            <small class="form-text text-muted">Choose a unique username</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="securityPin" class="form-label">Security PIN</label>
-                            <input type="password" 
-                                   class="form-control" 
-                                   id="securityPin" 
-                                   @bind="newUser.SecurityPIN" 
-                                   placeholder="Enter 4-6 digit PIN"
-                                   maxlength="10"
-                                   required />
-                            <small class="form-text text-muted">Enter a secure PIN for your account</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Theme Preference</label>
-                            <div class="btn-group w-100" role="group">
-                                <input type="radio" class="btn-check" name="theme" id="lightTheme" 
-                                       @onchange="@((ChangeEventArgs e) => newUser.IsDarkMode = false)" />
-                                <label class="btn btn-outline-primary" for="lightTheme">☀️ Light</label>
-
-                                <input type="radio" class="btn-check" name="theme" id="darkTheme" 
-                                       @onchange="@((ChangeEventArgs e) => newUser.IsDarkMode = true)" />
-                                <label class="btn btn-outline-primary" for="darkTheme">🌙 Dark</label>
-                            </div>
-                            <small class="form-text text-muted d-block mt-2">Selected: @(newUser.IsDarkMode ? "Dark Mode" : "Light Mode")</small>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    <span>Creating...</span>
-                                }
-                                else
-                                {
-                                    <span>Create User</span>
-                                }
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <h1 class="app-title">Join MoodAtlas</h1>
+                <p class="app-subtitle">Start your mindfulness journey today</p>
             </div>
 
-            <div class="mt-4">
-                <a href="/login" class="btn btn-secondary">Back to Login</a>
+            <div class="signup-body">
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        @successMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        @errorMessage
+                        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+                    </div>
+                }
+
+                <form @onsubmit="HandleSubmit">
+                    <div class="form-group">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" 
+                               class="form-control form-control-lg premium-input" 
+                               id="username" 
+                               @bind="newUser.Username" 
+                               placeholder="Choose a unique username"
+                               required />
+                        <small class="input-hint">At least 3 characters</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="securityPin" class="form-label">Security PIN</label>
+                        <input type="password" 
+                               class="form-control form-control-lg premium-input" 
+                               id="securityPin" 
+                               @bind="newUser.SecurityPIN" 
+                               placeholder="Create a secure PIN"
+                               maxlength="10"
+                               required />
+                        <small class="input-hint">4-10 characters for security</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Theme Preference</label>
+                        <div class="theme-selector">
+                            <label class="theme-option @(newUser.IsDarkMode == false ? "active" : "")">
+                                <input type="radio" name="theme" checked="@(!newUser.IsDarkMode)"
+                                       @onchange="@(() => newUser.IsDarkMode = false)" />
+                                <span class="theme-icon">☀️</span>
+                                <span class="theme-label">Light</span>
+                            </label>
+                            <label class="theme-option @(newUser.IsDarkMode == true ? "active" : "")">
+                                <input type="radio" name="theme" checked="@(newUser.IsDarkMode)"
+                                       @onchange="@(() => newUser.IsDarkMode = true)" />
+                                <span class="theme-icon">🌙</span>
+                                <span class="theme-label">Dark</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-signup" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Creating Account...</span>
+                        }
+                        else
+                        {
+                            <span>Create My Account</span>
+                        }
+                    </button>
+                </form>
+
+                <div class="features">
+                    <div class="feature-item">
+                        <span class="feature-icon">📝</span>
+                        <span>Daily Journaling</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <span>Mood Analytics</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🔒</span>
+                        <span>Private & Secure</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-    .card {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    .signup-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1a1025 0%, #2d1f42 30%, #3b2d5a 60%, #4a3770 100%);
+        position: relative;
+        overflow: hidden;
+        padding: 20px;
     }
 
-    .card-header {
-        border-bottom: 2px solid #0d6efd;
+    .bg-animation {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 0;
+    }
+
+    .bg-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.5;
+    }
+
+    .orb-1 {
+        width: 400px;
+        height: 400px;
+        background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+        top: -100px;
+        left: -100px;
+    }
+
+    .orb-2 {
+        width: 500px;
+        height: 500px;
+        background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+        bottom: -150px;
+        right: -150px;
+    }
+
+    .orb-3 {
+        width: 300px;
+        height: 300px;
+        background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+        top: 40%;
+        right: 20%;
+    }
+
+    .signup-container {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 460px;
+    }
+
+    .signup-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    }
+
+    .signup-header {
+        text-align: center;
+        padding: 30px 40px 24px;
+        background: linear-gradient(180deg, rgba(124, 58, 237, 0.2) 0%, transparent 100%);
+        position: relative;
+    }
+
+    .back-link {
+        position: absolute;
+        top: 16px;
+        left: 20px;
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .back-link:hover {
+        color: white;
+    }
+
+    .logo-icon {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 16px;
+        font-size: 2rem;
+        box-shadow: 0 10px 30px rgba(167, 139, 250, 0.4);
+    }
+
+    .app-title {
+        color: white;
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .app-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        margin: 6px 0 0;
+    }
+
+    .signup-body {
+        padding: 28px 40px 36px;
+    }
+
+    .form-group {
+        margin-bottom: 22px;
     }
 
     .form-label {
+        color: rgba(255, 255, 255, 0.9);
         font-weight: 600;
-        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .premium-input {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 2px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 14px !important;
+        color: white !important;
+        padding: 14px 18px !important;
+        font-size: 1rem !important;
+    }
+
+    .premium-input::placeholder {
+        color: rgba(255, 255, 255, 0.4) !important;
+    }
+
+    .premium-input:focus {
+        background: rgba(255, 255, 255, 0.12) !important;
+        border-color: #a78bfa !important;
+        box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.2) !important;
+        outline: none;
+    }
+
+    .input-hint {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.8rem;
+        margin-top: 6px;
+        display: block;
+    }
+
+    .theme-selector {
+        display: flex;
+        gap: 12px;
+    }
+
+    .theme-option {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .theme-option input {
+        display: none;
+    }
+
+    .theme-option:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .theme-option.active {
+        background: rgba(167, 139, 250, 0.2);
+        border-color: #a78bfa;
+        box-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+    }
+
+    .theme-icon {
+        font-size: 1.8rem;
+    }
+
+    .theme-label {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .btn-signup {
+        width: 100%;
+        background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+        color: #1a1025;
+        border: none;
+        border-radius: 14px;
+        padding: 18px 24px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(167, 139, 250, 0.4);
+        margin-top: 28px;
+    }
+
+    .btn-signup:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(167, 139, 250, 0.5);
+    }
+
+    .btn-signup:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .features {
+        display: flex;
+        justify-content: center;
+        gap: 24px;
+        margin-top: 28px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .feature-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .feature-icon {
+        font-size: 1.2rem;
+    }
+
+    .signup-body .alert {
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+    }
+
+    .signup-body .alert-success {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #6ee7b7;
+    }
+
+    .signup-body .alert-danger {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+    }
+
+    .signup-body .alert .btn-close {
+        filter: invert(1);
+        opacity: 0.7;
     }
 </style>
 
 @code {
     private User newUser = new User();
-    private string successMessage = "";
-    private string errorMessage = "";
+    private string successMessage;
+    private string errorMessage;
     private bool isSubmitting = false;
 
     private async Task HandleSubmit()
@@ -118,7 +401,6 @@
 
         try
         {
-            // Validate input
             if (string.IsNullOrWhiteSpace(newUser.Username))
             {
                 errorMessage = "Username is required!";
@@ -142,26 +424,20 @@
 
             if (newUser.SecurityPIN.Length < 4 || newUser.SecurityPIN.Length > 10)
             {
-                errorMessage = "Security PIN must be between 4 and 10 characters!";
+                errorMessage = "PIN must be 4-10 characters!";
                 isSubmitting = false;
                 return;
             }
 
-
-
-            // Create the user
             int userId = await UserService.CreateUserAsync(newUser);
-
-            successMessage = $"✓ User created successfully! User ID: {userId}";
-
-            // Reset form
-            newUser = new User();
-            await Task.Delay(2000); // Show success message for 2 seconds
-            successMessage = null;
+            successMessage = "Account created successfully! Redirecting...";
+            
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/login");
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error creating user: {ex.Message}";
+            errorMessage = $"Error: {ex.Message}";
         }
         finally
         {

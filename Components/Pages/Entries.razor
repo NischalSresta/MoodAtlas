@@ -1,14 +1,16 @@
 @page "/entries"
 @using MoodAtlas.Services
 @using MoodAtlas.Models
+@using System.Text.RegularExpressions
 @inject EntryService EntryService
 @inject UserService UserService
+@inject MoodService MoodService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
 <div class="min-vh-100">
     <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);">
         <div class="container-fluid">
             <span class="navbar-brand fw-bold">MoodAtlas</span>
             <div class="ms-auto d-flex align-items-center gap-3">
@@ -26,14 +28,7 @@
             <a href="/entries" class="nav-link active">Entries</a>
             <a href="/calendar" class="nav-link">Calendar</a>
             <button class="nav-link ms-auto theme-toggle" @onclick="ToggleTheme" style="border: none; background: none; cursor: pointer;">
-                @if (isDarkMode)
-                {
-                    <span style="font-size: 1.5rem;">☀️</span>
-                }
-                else
-                {
-                    <span style="font-size: 1.5rem;">🌙</span>
-                }
+                @(isDarkMode ? "Light Mode" : "Dark Mode")
             </button>
         </div>
 
@@ -46,21 +41,29 @@
                                    class="form-control" 
                                    placeholder="Search entries..." 
                                    @bind="searchTerm"
+                                   @bind:event="oninput"
                                    @onkeyup="SearchEntries" />
                         </div>
                         <div class="col-md-2">
                             <input type="date" 
                                    class="form-control" 
-                                   @bind="filterStartDate" />
+                                   @bind="filterStartDate"
+                                   @bind:event="onchange" />
                         </div>
                         <div class="col-md-2">
                             <input type="date" 
                                    class="form-control" 
-                                   @bind="filterEndDate" />
+                                   @bind="filterEndDate"
+                                   @bind:event="onchange" />
                         </div>
-                        <div class="col-md-2 ms-auto">
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-secondary w-100" @onclick="ApplyFilters">
+                                Apply
+                            </button>
+                        </div>
+                        <div class="col-md-2">
                             <button class="btn btn-primary w-100" @onclick="CreateNewEntry">
-                                <span class="bi bi-plus-lg"></span> New Entry
+                                + New Entry
                             </button>
                         </div>
                     </div>
@@ -70,7 +73,9 @@
                     @if (filteredEntries.Count == 0)
                     {
                         <div class="p-5 text-center text-muted">
-                            <p>No entries found. <a href="/entry-editor">Create your first entry</a></p>
+                            <h5>No entries found</h5>
+                            <p>Start journaling your thoughts and feelings!</p>
+                            <a href="/entry-editor" class="btn btn-primary">Create Your First Entry</a>
                         </div>
                     }
                     else
@@ -80,14 +85,27 @@
                             {
                                 <div class="entry-item p-4 border-bottom" @onclick="() => EditEntry(entryItem.EntryId)" style="cursor: pointer;">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div>
+                                        <div class="flex-grow-1">
                                             <small class="text-muted">@entryItem.EntryDate.ToString("MMMM dd, yyyy")</small>
-                                            <h5 class="mb-1 mt-2">@entryItem.Title</h5>
+                                            <h5 class="mb-1 mt-2 fw-bold">@entryItem.Title</h5>
                                         </div>
-                                        <div class="mood-indicator" style="width: 16px; height: 16px; border-radius: 50%; background-color: @GetMoodColor(entryItem); margin-top: 4px;"></div>
+                                        <div class="mood-indicator" style="width: 12px; height: 12px; border-radius: 50%; background: @GetMoodColor(entryItem); margin-top: 8px; flex-shrink: 0;"></div>
                                     </div>
-                                    <p class="text-muted mb-0">@GetEntryPreview(entryItem.Content)</p>
-                                    <small class="text-muted mt-2 d-block">@entryItem.WordCount words</small>
+                                    <div class="entry-preview text-secondary mb-2">
+                                        @((MarkupString)RenderMarkdownPreview(entryItem.Content))
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <small class="text-muted">@entryItem.WordCount words</small>
+                                        @if (entryMoods.ContainsKey(entryItem.EntryId) && entryMoods[entryItem.EntryId].Any())
+                                        {
+                                            <div class="entry-moods">
+                                                @foreach (var mood in entryMoods[entryItem.EntryId].Take(3))
+                                                {
+                                                    <span class="badge bg-light text-dark me-1">@mood.Name</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
                             }
                         </div>
@@ -102,7 +120,7 @@
                                 disabled="@(currentPage == 1)">
                             Previous
                         </button>
-                        <span>Page @currentPage of @totalPages</span>
+                        <span class="text-muted">Page @currentPage of @totalPages</span>
                         <button class="btn btn-outline-secondary btn-sm" 
                                 @onclick="NextPage" 
                                 disabled="@(currentPage == totalPages)">
@@ -117,16 +135,35 @@
 
 <style>
     .entry-item {
-        transition: background-color 0.2s;
+        transition: all 0.2s ease;
     }
 
     .entry-item:hover {
-        background-color: rgba(102, 126, 234, 0.05);
+        background-color: rgba(124, 58, 237, 0.04);
+        transform: translateX(4px);
     }
 
     .entry-list {
         max-height: 600px;
         overflow-y: auto;
+    }
+    
+    .entry-preview {
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    
+    .entry-preview strong {
+        font-weight: 700 !important;
+        color: inherit;
+    }
+    
+    .entry-preview em {
+        font-style: italic;
+    }
+    
+    .entry-moods .badge {
+        font-size: 0.75rem;
     }
 </style>
 
@@ -134,9 +171,10 @@
     private User currentUser;
     private List<Entry> allEntries = new List<Entry>();
     private List<Entry> filteredEntries = new List<Entry>();
+    private Dictionary<int, List<Mood>> entryMoods = new Dictionary<int, List<Mood>>();
     private bool isDarkMode = false;
     private string searchTerm = "";
-    private DateTime filterStartDate = DateTime.Now.AddMonths(-1);
+    private DateTime filterStartDate = DateTime.Now.AddMonths(-3);
     private DateTime filterEndDate = DateTime.Now.AddDays(1);
     private int currentPage = 1;
     private int pageSize = 5;
@@ -147,7 +185,7 @@
         try
         {
             var users = await UserService.GetAllUsersAsync();
-            currentUser = users.FirstOrDefault();
+            currentUser = users?.FirstOrDefault();
 
             if (currentUser == null)
             {
@@ -161,7 +199,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
         }
     }
 
@@ -169,16 +207,31 @@
     {
         try
         {
-            allEntries = await EntryService.GetEntriesByUserIdAsync(currentUser.UserId);
+            allEntries = await EntryService.GetEntriesByUserIdAsync(currentUser.UserId) ?? new List<Entry>();
+            
+            foreach (var entry in allEntries)
+            {
+                var moods = await MoodService.GetMoodsForEntryAsync(entry.EntryId);
+                if (moods != null && moods.Any())
+                {
+                    entryMoods[entry.EntryId] = moods;
+                }
+            }
+            
             FilterEntries();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading entries: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Error loading entries: {ex.Message}");
         }
     }
 
     private void SearchEntries()
+    {
+        FilterEntries();
+    }
+
+    private void ApplyFilters()
     {
         FilterEntries();
     }
@@ -188,8 +241,8 @@
         filteredEntries = allEntries
             .Where(e => 
                 (string.IsNullOrEmpty(searchTerm) || 
-                 e.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                 e.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+                 (e.Title?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                 (e.Content?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)) &&
                 (e.EntryDate.Date >= filterStartDate.Date && e.EntryDate.Date <= filterEndDate.Date))
             .OrderByDescending(e => e.EntryDate)
             .ToList();
@@ -228,18 +281,51 @@
         }
     }
 
-    private string GetEntryPreview(string content)
+    /// <summary>
+    /// Renders markdown to HTML for preview display
+    /// </summary>
+    private string RenderMarkdownPreview(string content)
     {
         if (string.IsNullOrEmpty(content)) return "";
-        var preview = content.Length > 150 ? content.Substring(0, 150) + "..." : content;
-        return preview.Replace("\n", " ");
+        
+        // Get preview (first 200 chars)
+        var preview = content.Length > 200 ? content.Substring(0, 200) + "..." : content;
+        
+        // Replace newlines with spaces for preview
+        preview = preview.Replace("\r\n", " ").Replace("\n", " ").Replace("\r", " ");
+        
+        // Bold: **text** or __text__ - do this BEFORE escaping
+        preview = Regex.Replace(preview, @"\*\*(.+?)\*\*", "[[BOLD_START]]$1[[BOLD_END]]");
+        preview = Regex.Replace(preview, @"__(.+?)__", "[[BOLD_START]]$1[[BOLD_END]]");
+        
+        // Italic: *text* or _text_
+        preview = Regex.Replace(preview, @"(?<![*\w])\*([^*]+)\*(?![*\w])", "[[ITALIC_START]]$1[[ITALIC_END]]");
+        preview = Regex.Replace(preview, @"(?<![_\w])_([^_]+)_(?![_\w])", "[[ITALIC_START]]$1[[ITALIC_END]]");
+        
+        // Escape HTML to prevent XSS
+        preview = System.Net.WebUtility.HtmlEncode(preview);
+        
+        // Restore our markdown tags
+        preview = preview.Replace("[[BOLD_START]]", "<strong>").Replace("[[BOLD_END]]", "</strong>");
+        preview = preview.Replace("[[ITALIC_START]]", "<em>").Replace("[[ITALIC_END]]", "</em>");
+        
+        return preview;
     }
 
     private string GetMoodColor(Entry entry)
     {
-        // Random color based on entry ID for now
-        var colors = new[] { "#667eea", "#764ba2", "#f093fb", "#4facfe", "#00f2fe", "#43e97b", "#fa709a", "#fee140" };
-        return colors[entry.EntryId % colors.Length];
+        if (entryMoods.ContainsKey(entry.EntryId) && entryMoods[entry.EntryId].Any())
+        {
+            var primaryMood = entryMoods[entry.EntryId].First();
+            return primaryMood.Category switch
+            {
+                "Positive" => "#10b981",
+                "Neutral" => "#f59e0b",
+                "Negative" => "#ef4444",
+                _ => "#7c3aed"
+            };
+        }
+        return "#7c3aed";
     }
 
     private void EditEntry(int entryId)

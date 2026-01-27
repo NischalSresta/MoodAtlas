@@ -28,14 +28,7 @@
             <a href="/entries" class="nav-link">Entries</a>
             <a href="/calendar" class="nav-link">Calendar</a>
             <button class="nav-link ms-auto theme-toggle" @onclick="ToggleTheme" style="border: none; background: none; cursor: pointer;">
-                @if (isDarkMode)
-                {
-                    <span style="font-size: 1.5rem;">☀️</span>
-                }
-                else
-                {
-                    <span style="font-size: 1.5rem;">🌙</span>
-                }
+                @(isDarkMode ? "Light Mode" : "Dark Mode")
             </button>
         </div>
 
@@ -66,28 +59,28 @@
                     <div class="card text-center p-4 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                         <h6 class="mb-2">Current Streak</h6>
                         <h2 class="fw-bold">@analyticsData?.CurrentStreak</h2>
-                        <small>🔥 consecutive days</small>
+                        <small>consecutive days</small>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card text-center p-4 shadow-sm" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
                         <h6 class="mb-2">Longest Streak</h6>
                         <h2 class="fw-bold">@analyticsData?.LongestStreak</h2>
-                        <small>🏆 all-time record</small>
+                        <small>all-time record</small>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card text-center p-4 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
                         <h6 class="mb-2">Total Entries</h6>
                         <h2 class="fw-bold">@analyticsData?.TotalEntries</h2>
-                        <small>📝 journal entries</small>
+                        <small>journal entries</small>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card text-center p-4 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
                         <h6 class="mb-2">Missed Days</h6>
                         <h2 class="fw-bold">@analyticsData?.MissedDays</h2>
-                        <small>📅 without entries</small>
+                        <small>without entries</small>
                     </div>
                 </div>
             </div>
@@ -99,7 +92,7 @@
                 <!-- Mood Distribution Chart -->
                 <div class="col-md-6">
                     <div class="card p-4 shadow-sm">
-                        <h5 class="mb-4">📊 Mood Distribution</h5>
+                        <h5 class="mb-4">Mood Distribution</h5>
                         <div id="moodChart" style="height: 300px;">
                             @if (analyticsData?.MoodDistribution != null)
                             {
@@ -132,7 +125,7 @@
                 <!-- Most Used Tags -->
                 <div class="col-md-6">
                     <div class="card p-4 shadow-sm">
-                        <h5 class="mb-4">🏷️ Most Used Tags</h5>
+                        <h5 class="mb-4">Most Used Tags</h5>
                         <div id="tagChart" style="height: 300px;">
                             @if (analyticsData?.TagFrequency != null && analyticsData.TagFrequency.Any())
                             {
@@ -161,7 +154,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="card p-4 shadow-sm">
-                        <h5 class="mb-4">📈 Word Count Trend</h5>
+                        <h5 class="mb-4">Word Count Trend</h5>
                         <div style="height: 250px;">
                             @if (analyticsData?.WordCountTrend != null && analyticsData.WordCountTrend.Any())
                             {
@@ -187,7 +180,7 @@
 
                 <div class="col-md-6">
                     <div class="card p-4 shadow-sm">
-                        <h5 class="mb-4">🎯 Insights</h5>
+                        <h5 class="mb-4">Insights</h5>
                         <div class="insights">
                             <div class="insight-item mb-3">
                                 <strong>Most Frequent Mood:</strong>
@@ -232,19 +225,19 @@
             <div class="row g-3">
                 <div class="col-12">
                     <div class="card p-4 shadow-sm">
-                        <h5 class="mb-4">🚀 Quick Actions</h5>
+                        <h5 class="mb-4">Quick Actions</h5>
                         <div class="d-flex gap-3 flex-wrap">
                             <a href="/entry-editor" class="btn btn-primary btn-lg">
-                                <span class="bi bi-pencil-square"></span> Write Today's Entry
+                                Write Today's Entry
                             </a>
                             <button class="btn btn-success btn-lg" @onclick="ExportData">
-                                <span class="bi bi-download"></span> Export to PDF
+                                Export to PDF
                             </button>
                             <a href="/calendar" class="btn btn-info btn-lg">
-                                <span class="bi bi-calendar"></span> View Calendar
+                                View Calendar
                             </a>
-                            <a href="/analytics" class="btn btn-warning btn-lg">
-                                <span class="bi bi-graph-up"></span> Detailed Analytics
+                            <a href="/entries" class="btn btn-warning btn-lg">
+                                View All Entries
                             </a>
                         </div>
                     </div>
@@ -264,6 +257,13 @@
                     <button type="button" class="btn-close" @onclick="CloseExportModal"></button>
                 </div>
                 <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(exportMessage))
+                    {
+                        <div class="alert @(exportSuccess ? "alert-success" : "alert-danger")" role="alert">
+                            @exportMessage
+                        </div>
+                    }
+                    
                     <div class="mb-3">
                         <label class="form-label">Start Date</label>
                         <input type="date" class="form-control" @bind="exportStartDate" />
@@ -273,12 +273,16 @@
                         <input type="date" class="form-control" @bind="exportEndDate" />
                     </div>
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" @bind="includeMoods" />
-                        <label class="form-check-label">Include Moods</label>
+                        <input class="form-check-input" type="checkbox" @bind="includeMoods" id="includeMoods" />
+                        <label class="form-check-label" for="includeMoods">Include Moods</label>
                     </div>
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" @bind="includeTags" />
-                        <label class="form-check-label">Include Tags</label>
+                        <input class="form-check-input" type="checkbox" @bind="includeTags" id="includeTags" />
+                        <label class="form-check-label" for="includeTags">Include Tags</label>
+                    </div>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <small>The PDF will be generated and a share dialog will open allowing you to save or share the file.</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -287,11 +291,11 @@
                         @if (isExporting)
                         {
                             <span class="spinner-border spinner-border-sm me-2"></span>
-                            <text>Exporting...</text>
+                            <text>Generating PDF...</text>
                         }
                         else
                         {
-                            <span>Export</span>
+                            <span>Export & Share</span>
                         }
                     </button>
                 </div>
@@ -342,6 +346,8 @@
     private DateTime exportEndDate = DateTime.Now;
     private bool includeMoods = true;
     private bool includeTags = true;
+    private string exportMessage;
+    private bool exportSuccess = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -380,25 +386,31 @@
     {
         exportStartDate = startDate;
         exportEndDate = endDate;
+        exportMessage = null;
+        exportSuccess = false;
         showExportModal = true;
     }
 
     private async Task ConfirmExport()
     {
         isExporting = true;
+        exportMessage = null;
+        
         try
         {
-            var filePath = await ExportService.ExportToPdfAsync(UserId, exportStartDate, exportEndDate);
-
-            // Download the file
-            await JS.InvokeVoidAsync("downloadFile", filePath, $"MoodAtlas_Export_{DateTime.Now:yyyyMMdd}.pdf");
-
+            await ExportService.ExportAndSharePdfAsync(UserId, exportStartDate, exportEndDate);
+            
+            exportSuccess = true;
+            exportMessage = "PDF generated successfully! Share dialog opened.";
+            
+            await Task.Delay(1500);
             CloseExportModal();
         }
         catch (Exception ex)
         {
+            exportSuccess = false;
+            exportMessage = $"Error: {ex.Message}";
             Console.WriteLine($"Export error: {ex.Message}");
-            await JS.InvokeVoidAsync("alert", $"Export failed: {ex.Message}");
         }
         finally
         {
@@ -409,6 +421,7 @@
     private void CloseExportModal()
     {
         showExportModal = false;
+        exportMessage = null;
     }
 
     private async Task ToggleTheme()

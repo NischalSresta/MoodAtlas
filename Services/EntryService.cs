@@ -74,10 +74,14 @@ public class EntryService
 
     public async Task<List<Entry>> GetEntriesByDateRangeAsync(int userId, DateTime startDate, DateTime endDate)
     {
+        // Normalize dates to ensure proper comparison
+        var start = startDate.Date;
+        var end = endDate.Date.AddDays(1).AddTicks(-1); // End of the day
+        
         return await _db.Table<Entry>()
             .Where(e => e.UserId == userId && 
-                   e.EntryDate >= startDate && 
-                   e.EntryDate <= endDate)
+                   e.EntryDate >= start && 
+                   e.EntryDate <= end)
             .OrderByDescending(e => e.EntryDate)
             .ToListAsync();
     }
