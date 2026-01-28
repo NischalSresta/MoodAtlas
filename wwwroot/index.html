@@ -120,6 +120,49 @@
             
             return text;
         }
+
+        // Get text selection from textarea for rich text editor
+        function getTextSelection(textareaId) {
+            const textarea = document.getElementById(textareaId);
+            if (!textarea) {
+                return { start: -1, end: -1, text: '' };
+            }
+            
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value.substring(start, end);
+            
+            return { start: start, end: end, text: text };
+        }
+
+        // Set cursor position in textarea
+        function setTextareaCursor(textareaId, position) {
+            const textarea = document.getElementById(textareaId);
+            if (textarea) {
+                textarea.focus();
+                textarea.setSelectionRange(position, position);
+            }
+        }
+
+        // Insert text at cursor position in textarea
+        function insertTextAtCursor(textareaId, text) {
+            const textarea = document.getElementById(textareaId);
+            if (!textarea) return;
+            
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end);
+            
+            textarea.value = before + text + after;
+            textarea.focus();
+            
+            const newPos = start + text.length;
+            textarea.setSelectionRange(newPos, newPos);
+            
+            // Trigger input event for Blazor binding
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
     </script>
 
 </body>
